@@ -1,0 +1,8 @@
+{
+  "name": "Banking",
+  "description": "USA Grant Funding secure digital banking client portal providing real-time USD balance management, deposits, transfers, transaction history, and account owner credentials.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
