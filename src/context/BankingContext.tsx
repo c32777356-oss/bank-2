@@ -35,6 +35,7 @@ interface BankingContextType {
   setSelectedAccountId: (id: string | null) => void;
   activeAccount: Account | null;
   totalNetWorth: number;
+  allAccounts: Account[];
   registeredUsers: UserSession[];
   isAdminMode: boolean;
   setIsAdminMode: (val: boolean) => void;
@@ -61,6 +62,7 @@ interface BankingContextType {
   setAccountBalance: (accountId: string, newBalance: number) => void;
   resetToDemoData: () => Promise<void>;
   purgeSiteData: () => Promise<void>;
+  switchActiveUser: (targetUser: UserSession) => void;
 }
 
 const BankingContext = createContext<BankingContextType | undefined>(undefined);
@@ -195,7 +197,24 @@ export const BankingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
 
         const deletedSet = new Set(currentConfig.deletedUserIds);
-        setRegisteredUsers(firestoreUsers.filter((u) => !deletedSet.has(u.id)));
+        const filtered = firestoreUsers.filter((u) => !deletedSet.has(u.id));
+        setRegisteredUsers(filtered);
+
+        // Reactively synchronize active user session when admin changes their profile
+        setUser((currentUser) => {
+          if (!currentUser || currentUser.id === 'usr_admin') return currentUser;
+          const updated = filtered.find((u) => u.id === currentUser.id);
+          if (updated) {
+            const isRemembered = localStorage.getItem(STORAGE_KEYS.REMEMBER_ME) === 'true';
+            if (isRemembered) {
+              localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
+            } else {
+              sessionStorage.setItem(STORAGE_KEYS.SESSION_USER, JSON.stringify(updated));
+            }
+            return updated;
+          }
+          return currentUser;
+        });
       },
       (err) => {
         handleFirestoreError(err, OperationType.GET, 'users');
@@ -461,22 +480,46 @@ export const BankingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateUserDetails = (userId: string, data: Partial<UserSession>) => {
-    setRegisteredUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, ...data } : u))
-    );
-    if (user && user.id === userId) {
-      const updated = { ...user, ...data };
-      setUser(updated);
-      const isRemembered = localStorage.getItem(STORAGE_KEYS.REMEMBER_ME) === 'true';
-      if (isRemembered) {
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
-      } else {
-        sessionStorage.setItem(STORAGE_KEYS.SESSION_USER, JSON.stringify(updated));
-      }
+    const updatedData: Partial<UserSession> = { ...data };
+    if (data.name) {
+      updatedData.avatarInitials =
+        data.name
+          .split(' ')
+          .map((n) => n[0]?.toUpperCase())
+          .join('')
+          .slice(0, 2) || 'AV';
     }
-    updateDoc(doc(db, 'users', userId), data).catch((err) =>
+
+    setRegisteredUsers((prev) => {
+      const exists = prev.some((u) => u.id === userId);
+      if (exists) {
+        return prev.map((u) => (u.id === userId ? { ...u, ...updatedData } : u));
+      }
+      return [{ id: userId, ...updatedData } as UserSession, ...prev];
+    });
+
+    setUser((currentUser) => {
+      if (currentUser && currentUser.id === userId) {
+        const updated = { ...currentUser, ...updatedData };
+        const isRemembered = localStorage.getItem(STORAGE_KEYS.REMEMBER_ME) === 'true';
+        if (isRemembered) {
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
+        } else {
+          sessionStorage.setItem(STORAGE_KEYS.SESSION_USER, JSON.stringify(updated));
+        }
+        return updated;
+      }
+      return currentUser;
+    });
+
+    setDoc(doc(db, 'users', userId), updatedData, { merge: true }).catch((err) =>
       handleFirestoreError(err, OperationType.UPDATE, `users/${userId}`)
     );
+  };
+
+  const switchActiveUser = (targetUser: UserSession) => {
+    saveUserSession(targetUser, true);
+    setIsAdminMode(false);
   };
 
   const deleteUser = (userId: string): boolean => {
@@ -509,20 +552,28 @@ export const BankingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateAccountDetails = (accountId: string, data: Partial<Account>) => {
     const safeData = { ...data, type: 'checking' as const };
-    setAllAccounts((prev) =>
-      prev.map((a) => (a.id === accountId ? { ...a, ...safeData } : a))
-    );
-    updateDoc(doc(db, 'accounts', accountId), safeData).catch((err) =>
+    setAllAccounts((prev) => {
+      const exists = prev.some((a) => a.id === accountId);
+      if (exists) {
+        return prev.map((a) => (a.id === accountId ? { ...a, ...safeData } : a));
+      }
+      return [{ id: accountId, ...safeData } as Account, ...prev];
+    });
+    setDoc(doc(db, 'accounts', accountId), safeData, { merge: true }).catch((err) =>
       handleFirestoreError(err, OperationType.UPDATE, `accounts/${accountId}`)
     );
   };
 
   const setAccountBalance = (accountId: string, newBalance: number) => {
     const balNum = Number(newBalance);
-    setAllAccounts((prev) =>
-      prev.map((a) => (a.id === accountId ? { ...a, balance: balNum } : a))
-    );
-    updateDoc(doc(db, 'accounts', accountId), { balance: balNum }).catch((err) =>
+    setAllAccounts((prev) => {
+      const exists = prev.some((a) => a.id === accountId);
+      if (exists) {
+        return prev.map((a) => (a.id === accountId ? { ...a, balance: balNum } : a));
+      }
+      return prev;
+    });
+    setDoc(doc(db, 'accounts', accountId), { balance: balNum }, { merge: true }).catch((err) =>
       handleFirestoreError(err, OperationType.UPDATE, `accounts/${accountId}`)
     );
   };
@@ -792,6 +843,7 @@ export const BankingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setSelectedAccountId,
         activeAccount,
         totalNetWorth,
+        allAccounts,
         registeredUsers,
         isAdminMode,
         setIsAdminMode,
@@ -818,6 +870,7 @@ export const BankingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteTransaction,
         resetToDemoData,
         purgeSiteData,
+        switchActiveUser,
       }}
     >
       {children}

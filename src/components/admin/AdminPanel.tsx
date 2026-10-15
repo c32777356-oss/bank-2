@@ -28,6 +28,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     user,
     registeredUsers,
     accounts,
+    allAccounts,
     transactions,
     updateUserDetails,
     deleteUser,
@@ -39,6 +40,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     totalNetWorth,
     resetToDemoData,
     purgeSiteData,
+    switchActiveUser,
   } = useBanking();
 
   const [confirmPurge, setConfirmPurge] = useState(false);
@@ -66,6 +68,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     company: '',
     tier: '',
     phone: '',
+    memberSince: '',
+    accountName: '',
+    balance: 0,
+    fullAccountNumber: '',
+    routingNumber: '',
   });
 
   // Editing Account state
@@ -101,15 +108,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     memo: '',
   });
 
-  // User edit handlers
+  // User edit handlers: loads both user profile AND account credentials
   const handleStartEditUser = (u: UserSession) => {
     setEditingUser(u);
+    const uAcc = allAccounts.find((a) => a.userId === u.id) || accounts.find((a) => a.userId === u.id);
     setUserForm({
       name: u.name,
       email: u.email,
       company: u.company || '',
       tier: u.tier,
       phone: u.phone || '',
+      memberSince: u.memberSince || 'October 2026',
+      accountName: uAcc?.name || 'Primary Commercial Checking',
+      balance: uAcc?.balance ?? 35000,
+      fullAccountNumber: uAcc?.fullAccountNumber || '8924019284',
+      routingNumber: uAcc?.routingNumber || '021000021',
     });
   };
 
@@ -117,13 +130,36 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     e.preventDefault();
     if (!editingUser) return;
     updateUserDetails(editingUser.id, {
-      name: userForm.name,
-      email: userForm.email,
-      company: userForm.company,
+      name: userForm.name.trim(),
+      email: userForm.email.trim(),
+      company: userForm.company.trim(),
       tier: userForm.tier as any,
-      phone: userForm.phone,
+      phone: userForm.phone.trim(),
+      memberSince: userForm.memberSince.trim(),
     });
+
+    const uAcc = allAccounts.find((a) => a.userId === editingUser.id) || accounts.find((a) => a.userId === editingUser.id);
+    const full = userForm.fullAccountNumber.trim() || '8924019284';
+    const masked = full.length > 4 ? `•••• ${full.slice(-4)}` : full;
+    const accId = uAcc ? uAcc.id : `acc_usr_${editingUser.id}`;
+
+    updateAccountDetails(accId, {
+      id: accId,
+      userId: editingUser.id,
+      name: userForm.accountName.trim() || 'Primary Commercial Checking',
+      balance: Number(userForm.balance) || 0,
+      fullAccountNumber: full,
+      accountNumber: masked,
+      routingNumber: userForm.routingNumber.trim() || '021000021',
+      type: 'checking',
+      currency: 'USD',
+      dailyWithdrawalLimit: 25000,
+      withdrawnToday: 0,
+    });
+
     setEditingUser(null);
+    setUserFeedback(`Profile & Account for "${userForm.name}" updated successfully.`);
+    setTimeout(() => setUserFeedback(null), 4000);
   };
 
   // Account edit handlers
