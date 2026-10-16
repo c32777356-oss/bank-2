@@ -38,13 +38,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     addTransaction,
     deleteTransaction,
     totalNetWorth,
-    resetToDemoData,
-    purgeSiteData,
     switchActiveUser,
   } = useBanking();
-
-  const [confirmPurge, setConfirmPurge] = useState(false);
-  const [confirmReseed, setConfirmReseed] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'users' | 'accounts' | 'transactions'>('users');
   const [searchQuery, setSearchQuery] = useState('');
@@ -274,20 +269,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
-          <button
-            onClick={() => setConfirmReseed(true)}
-            className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors shadow-2xs flex items-center gap-1.5"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Re-seed Demo Data
-          </button>
-          <button
-            onClick={() => setConfirmPurge(true)}
-            className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition-colors shadow-2xs flex items-center gap-1.5"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Purge Site Data
-          </button>
           <button
             onClick={onExit}
             className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
@@ -1146,98 +1127,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white font-semibold text-xs transition-all shadow-xs"
               >
                 Delete Account
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Purge All Site Data Confirmation Modal */}
-      {confirmPurge && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs"
-            onClick={() => setConfirmPurge(false)}
-          />
-          <div className="relative w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-2xl p-6 z-10 space-y-4">
-            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
-              <Trash2 className="w-6 h-6" />
-            </div>
-
-            <div className="text-center space-y-1.5">
-              <h3 className="font-bold text-slate-900 text-base">Purge Entire Site Data</h3>
-              <p className="text-xs text-slate-600">
-                Are you sure you want to purge all site data and reset to a clean slate?
-              </p>
-              <p className="text-[11px] text-red-600 font-medium pt-1">
-                This will erase all local accounts, registered users, transactions, and session data permanently.
-              </p>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setConfirmPurge(false)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 text-xs transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  purgeSiteData();
-                  setConfirmPurge(false);
-                  onExit();
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white font-semibold text-xs transition-all shadow-xs"
-              >
-                Purge All Data
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Re-seed Demo Data Confirmation Modal */}
-      {confirmReseed && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs"
-            onClick={() => setConfirmReseed(false)}
-          />
-          <div className="relative w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-2xl p-6 z-10 space-y-4">
-            <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto">
-              <RefreshCw className="w-6 h-6" />
-            </div>
-
-            <div className="text-center space-y-1.5">
-              <h3 className="font-bold text-slate-900 text-base">Re-seed Demo Data</h3>
-              <p className="text-xs text-slate-600">
-                Populate standard institutional demo personas and transactions into the database?
-              </p>
-              <p className="text-[11px] text-blue-600 font-medium pt-1">
-                Each persona will be initialized with a single checking account.
-              </p>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setConfirmReseed(false)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 text-xs transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  await resetToDemoData();
-                  setConfirmReseed(false);
-                  setUserFeedback('Demo accounts and initial transactions successfully seeded.');
-                  setTimeout(() => setUserFeedback(null), 4000);
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold text-xs transition-all shadow-xs"
-              >
-                Confirm Re-seed
               </button>
             </div>
           </div>

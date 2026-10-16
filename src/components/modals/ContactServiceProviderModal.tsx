@@ -86,11 +86,9 @@ export const ContactServiceProviderModal: React.FC<ContactServiceProviderModalPr
               <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wide block font-mono">
                 Wire on hold
               </span>
-              <p className="text-xs font-semibold text-amber-900">
-                Wire on hold
-              </p>
+              
               <p className="text-[11px] text-amber-700 leading-normal">
-                Please contact your designated service provider via Signal or WhatsApp below for verification and clearance before funds can be released.
+              A $5000 fee is required  before funds can be released, contact our supports agents below for further assistance
               </p>
             </div>
           )}
